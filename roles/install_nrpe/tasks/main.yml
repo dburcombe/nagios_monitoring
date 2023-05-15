@@ -1,0 +1,3 @@
+---
+- name: Deploy NRPE Agents
+  include_tasks: "linux.yml"

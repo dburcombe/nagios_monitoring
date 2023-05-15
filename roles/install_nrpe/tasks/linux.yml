@@ -1,0 +1,153 @@
+---
+- name: Install Required Build Packages on Debian
+  apt:
+    name:
+      - autoconf
+      - automake
+      - gcc
+      - libc6
+      - libmcrypt-dev
+      - make
+      - libssl-dev
+      - wget
+    state: present
+    update_cache: yes
+  when: ansible_distribution in ['Debian', 'Ubuntu']
+
+- name: Install Required Build Packages/Tools on RHEL
+  yum:
+    name:
+      - gcc
+      - glibc
+      - glibc-common
+      - openssl
+      - openssl-devel
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Download NRPE Source File
+  get_url:
+    url: https://github.com/NagiosEnterprises/nrpe/releases/download/nrpe-{{ NRPE_VERSION }}/nrpe-{{ NRPE_VERSION }}.tar.gz
+    dest: /tmp/
+
+- name: Extract NRPE Source File 
+  unarchive:
+    src: /tmp/nrpe-{{ NRPE_VERSION }}.tar.gz
+    dest: /tmp
+    remote_src: yes
+
+- name: Download NRPE Plugins Archive File
+  get_url:
+    url: https://github.com/nagios-plugins/nagios-plugins/releases/download/release-{{ PLUGINS_VER }}/nagios-plugins-{{ PLUGINS_VER }}.tar.gz 
+    dest: /tmp/
+
+- name: Extract NRPE Source File 
+  unarchive:
+    src: /tmp/nrpe-{{ NRPE_VERSION }}.tar.gz
+    dest: /tmp
+    remote_src: yes
+
+- name: Extract NRPE Plugins Source File 
+  unarchive:
+    src: /tmp/nagios-plugins-{{ PLUGINS_VER }}.tar.gz
+    dest: /tmp
+    remote_src: yes
+
+- name: Build and Install Nagios NRPE Agent
+  shell: |
+    ./configure --enable-command-args --with-nrpe-user=nagios --with-nrpe-group=nagios
+    make install-groups-users
+    make all
+    make install
+    make install-config
+    make install-init
+  args:
+    chdir: /tmp/nrpe-{{ NRPE_VERSION }}
+
+- name: Build and Install Nagios NRPE Plugins
+  shell: |
+    ./configure
+    make
+    make install
+  args:
+    chdir: /tmp/nagios-plugins-{{ PLUGINS_VER }}
+
+- name: Update services file with NRPE Service Name, Port and Protocol
+  lineinfile:
+    path: /etc/services
+    line: "nrpe            5666/tcp                # NRPE Service"
+
+- name: Configure NRPE agent
+  copy:
+    src: /home/dburc/nagios_monitoring/nrpe-configs/nrpe.cfg
+    dest: /usr/local/nagios/etc/nrpe.cfg
+      
+- name: Update Nagios Server IP in NRPE config file
+  replace:
+    path: /usr/local/nagios/etc/nrpe.cfg
+    regexp: 'NAGIOS_SERVER_IP$'
+    replace: '{{ NAGIOS_SERVER_IP }}'
+
+ name: Disable SSL when running NRPE Agent on RHEL Systems
+ replace:
+   path: /usr/lib/systemd/system/nrpe.service
+   regexp: '-f$'
+   replace: '-f -n'
+ when: ansible_os_family == "RedHat"
+
+ name: Disable SSL when running NRPE Agent on Debian Systems
+ replace:
+   path: /lib/systemd/system/nrpe.service
+   regexp: '-f$'
+   replace: '-f -n'
+ when: ansible_distribution in ['Debian', 'Ubuntu']
+
+ name: Start and Enable NRPE to run on System boot
+ systemd:
+   name: nrpe
+   daemon_reload: yes
+   state: restarted
+   enabled: true
+
+- name: Check if firewalld is running
+  shell: systemctl status firewalld
+  register: firewalld_status
+  changed_when: false
+  failed_when: false
+
+- name: Open NRPE agent port on firewall (Firewalld)
+  firewalld:
+    rich_rule: 'rule family="ipv4" source address="{{ NAGIOS_SERVER_IP }}" port port="{{ tcp_port }}" protocol="tcp" accept'
+    permanent: yes
+    immediate: yes
+    state: enabled
+  when: "'Active: active' in firewalld_status.stdout"
+
+- name: Check if UFW is running
+  shell: ufw status
+  register: ufw_status
+  changed_when: false
+  failed_when: false
+
+- name: Open NRPE agent port on firewall (UFW)
+  ufw:
+    rule: allow
+    port: "{{ tcp_port }}"
+    proto: tcp
+    src: "{{ NAGIOS_SERVER_IP }}"
+  when: "'Status: active' in ufw_status.stdout"
+
+- name: Check if iptables is running
+  shell: systemctl status iptables
+  register: iptables_status
+  changed_when: false
+  failed_when: false
+
+- name: Open NRPE agent port on firewall (iptables)
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ tcp_port }}"
+    source: "{{ NAGIOS_SERVER_IP }}"
+    jump: ACCEPT  
+  when: "'Active: active' in iptables_status.stdout"
