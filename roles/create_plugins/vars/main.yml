@@ -1,0 +1,16 @@
+---
+
+command: command[check_disk_uses]=/usr/lib/nagios/plugins/check_disk_uses.sh /dev/sda1 
+
+command_definition: define command{
+                            command_name    check_disk_uses
+                            command_line    $USER1$/check_nrpe -H $HOSTADDRESS$ -c check_disk_uses
+}
+
+command_service: define service {
+                         use                             generic-service
+                         host_name                       localhost
+                         service_description             service check customized by daniel
+                         check_command                   check_disk_uses
+                         }
+
