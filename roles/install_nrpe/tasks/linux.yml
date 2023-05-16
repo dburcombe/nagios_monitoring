@@ -13,6 +13,8 @@
     state: present
     update_cache: yes
   when: ansible_distribution in ['Debian', 'Ubuntu']
+  notify:
+    - restart nrpe      
 
 - name: Install Required Build Packages/Tools on RHEL
   yum:
@@ -24,34 +26,45 @@
       - openssl-devel
     state: present
   when: ansible_os_family == "RedHat"
+  notify:
+    - restart nrpe      
 
 - name: Download NRPE Source File
   get_url:
     url: https://github.com/NagiosEnterprises/nrpe/releases/download/nrpe-{{ NRPE_VERSION }}/nrpe-{{ NRPE_VERSION }}.tar.gz
     dest: /tmp/
+  notify:
+    - restart nrpe
 
 - name: Extract NRPE Source File 
   unarchive:
     src: /tmp/nrpe-{{ NRPE_VERSION }}.tar.gz
     dest: /tmp
-    remote_src: yes
-
+    remote_src: yes 
+  notify:
+    - restart nrpe
 - name: Download NRPE Plugins Archive File
   get_url:
     url: https://github.com/nagios-plugins/nagios-plugins/releases/download/release-{{ PLUGINS_VER }}/nagios-plugins-{{ PLUGINS_VER }}.tar.gz 
-    dest: /tmp/
+    dest: /tmp/ 
+  notify:
+    - restart nrpe
 
 - name: Extract NRPE Source File 
   unarchive:
     src: /tmp/nrpe-{{ NRPE_VERSION }}.tar.gz
     dest: /tmp
     remote_src: yes
+  notify:
+    - restart nrpe
 
-- name: Extract NRPE Plugins Source File 
+- name: Extract NRPE Plugins Source File
   unarchive:
     src: /tmp/nagios-plugins-{{ PLUGINS_VER }}.tar.gz
     dest: /tmp
     remote_src: yes
+  notify:
+    - restart nrpe
 
 - name: Build and Install Nagios NRPE Agent
   shell: |
@@ -62,7 +75,9 @@
     make install-config
     make install-init
   args:
-    chdir: /tmp/nrpe-{{ NRPE_VERSION }}
+    chdir: /tmp/nrpe-{{ NRPE_VERSION }} 
+  notify:
+    - restart nrpe
 
 - name: Build and Install Nagios NRPE Plugins
   shell: |
@@ -71,43 +86,46 @@
     make install
   args:
     chdir: /tmp/nagios-plugins-{{ PLUGINS_VER }}
+  notify:
+    - restart nrpe 
 
 - name: Update services file with NRPE Service Name, Port and Protocol
   lineinfile:
     path: /etc/services
     line: "nrpe            5666/tcp                # NRPE Service"
+  notify:
+    - restart nrpe
 
 - name: Configure NRPE agent
   copy:
     src: /home/dburc/nagios_monitoring/nrpe-configs/nrpe.cfg
     dest: /usr/local/nagios/etc/nrpe.cfg
-      
+  notify:
+    - restart nrpe
+
 - name: Update Nagios Server IP in NRPE config file
   replace:
     path: /usr/local/nagios/etc/nrpe.cfg
     regexp: 'NAGIOS_SERVER_IP$'
     replace: '{{ NAGIOS_SERVER_IP }}'
+  notify:
+    - restart nrpe
 
- name: Disable SSL when running NRPE Agent on RHEL Systems
- replace:
-   path: /usr/lib/systemd/system/nrpe.service
-   regexp: '-f$'
-   replace: '-f -n'
- when: ansible_os_family == "RedHat"
+- name: Disable SSL when running NRPE Agent on Debian Systems
+  replace:
+    path: /lib/systemd/system/nrpe.service
+    regexp: '-f$'
+    replace: '-f -n'
+  when: ansible_distribution in ['Debian', 'Ubuntu']    
+  notify:
+    - restart nrpe
 
- name: Disable SSL when running NRPE Agent on Debian Systems
- replace:
-   path: /lib/systemd/system/nrpe.service
-   regexp: '-f$'
-   replace: '-f -n'
- when: ansible_distribution in ['Debian', 'Ubuntu']
-
- name: Start and Enable NRPE to run on System boot
- systemd:
-   name: nrpe
-   daemon_reload: yes
-   state: restarted
-   enabled: true
+- name: Start and Enable NRPE to run on System boot
+  systemd:
+    name: nrpe
+    daemon_reload: yes
+    state: restarted
+    enabled: true   
 
 - name: Check if firewalld is running
   shell: systemctl status firewalld
@@ -150,4 +168,4 @@
     destination_port: "{{ tcp_port }}"
     source: "{{ NAGIOS_SERVER_IP }}"
     jump: ACCEPT  
-  when: "'Active: active' in iptables_status.stdout"
+  when: "'Active: active' in iptables_status.stdout"  

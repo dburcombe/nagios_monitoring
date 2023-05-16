@@ -4,5 +4,5 @@
   remote_user: dburc
   become: yes
   roles:
-    - install_nrpe
+          # - install_nrpe
     - create_plugins
