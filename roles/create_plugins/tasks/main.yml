@@ -2,17 +2,19 @@
 
 - name: write the plugin shell script
   copy:
-    src: ~/nagios_monitoring/roles/create_plugins/tasks/check_disk_uses.sh
-    dest: ~/usr/lib/nagios/plugins/check_disk_uses.sh
+    src: ~/nagios_monitoring/roles/create_plugins/tasks/check_disk_uses_ansible.sh
+    dest: /usr/lib/nagios/plugins/check_disk_uses_ansible.sh
+    owner: root
+    group: root
     mode: '0755'
 
 - name: add command to configuration file
   lineinfile: dest=/etc/nagios/nrpe.cfg line= "{{ command }}" 
 
 - name: add command definition
-  lineinfile: dest=/etc/nagios/objects/commands.cfg line= "{{ command_definition }}"
+  lineinfile: dest=/usr/local/nagios/etc/objects/commands.cfg line= "{{ command_definition }}" 
 
 - name: add command service
-  lineinfile: dest=/usr/local/nagios/etc/objects/localhost.cfg line= "{{ define_service }}" 
+  lineinfile: dest=/usr/local/nagios/etc/objects/localhost.cfg line= "{{ command_service }}" 
 
 
