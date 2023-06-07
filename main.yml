@@ -1,5 +1,5 @@
 ---
-- hosts: all
+- hosts: web_servers
   gather_facts: True
   remote_user: dburc
   become: yes

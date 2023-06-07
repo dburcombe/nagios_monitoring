@@ -1,6 +1,6 @@
 [master_server]
 4.205.13.95
 
-[servers]
+[web_servers]
 20.87.214.18
 

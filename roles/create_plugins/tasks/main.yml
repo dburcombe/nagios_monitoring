@@ -9,7 +9,12 @@
     mode: '0755'
 
 - name: add command to configuration file
-  lineinfile: dest=/etc/nagios/nrpe.cfg line= "{{ command }}" 
+  lineinfile:
+    insertafter: \\command[daniel_disk]=/usr/lib/nagios/plugins/daniel_disk.sh /dev/sda1\\
+    
+    line: "{{ command }}"
+    path: /etc/nagios/nrpe.cfg
+    create: true  
 
 - name: add command definition
   lineinfile: dest=/usr/local/nagios/etc/objects/commands.cfg line= "{{ command_definition }}" 
