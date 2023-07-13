@@ -1,25 +1,46 @@
 ---
 
-- name: write the plugin shell script
+- name: write the plugin shell scripts
   copy:
-    src: ~/nagios_monitoring/roles/create_plugins/tasks/check_disk_uses_ansible.sh
-    dest: /usr/lib/nagios/plugins/check_disk_uses_ansible.sh
+    src: ~/nagios_monitoring/roles/create_plugins/tasks/shell_scripts/
+    dest: /usr/lib/nagios/plugins/
     owner: root
     group: root
     mode: '0755'
 
 - name: add command to configuration file
   lineinfile:
-    insertafter: \\command[daniel_disk]=/usr/lib/nagios/plugins/daniel_disk.sh /dev/sda1\\
-    
-    line: "{{ command }}"
     path: /etc/nagios/nrpe.cfg
-    create: true  
+    state: present  
+    line: "{{ item }}"
+  with_items:
+  - "{{ check_disc_uses }}"
+  - "{{ check_pid }}"
+  - "{{ check_memory }}"
+  - "{{ check_status_code }}"
+  - "{{ check_volume }}"
 
 - name: add command definition
-  lineinfile: dest=/usr/local/nagios/etc/objects/commands.cfg line= "{{ command_definition }}" 
+  lineinfile:
+    path: /usr/local/nagios/etc/objects/commands.cfg
+    state: present
+    line: "{{ item }}"
+  with_items:
+  - "{{ disc_definition }}"
+  - "{{ pid_definition }}"
+  - "{{ memory_definition }}"
+  - "{{ status_code_definition }}"
+  - "{{ volume_definition }}"
 
 - name: add command service
-  lineinfile: dest=/usr/local/nagios/etc/objects/localhost.cfg line= "{{ command_service }}" 
-
+  lineinfile:
+    path: /usr/local/nagios/etc/objects/localhost.cfg
+    state: present
+    line: "{{ item }}"
+  with_items:
+  - "{{ disc_service }}"       
+  - "{{ pid_service }}"       
+  - "{{ memory_service }}"       
+  - "{{ status_code_service }}"       
+  - "{{ volume_service }}"       
 

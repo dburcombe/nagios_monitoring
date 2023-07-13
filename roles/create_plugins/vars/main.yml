@@ -1,16 +1,62 @@
 ---
 
-command: command[check_disk_uses(ansible)]=/usr/lib/nagios/plugins/check_disk_uses_ansible.sh /dev/sda1 
+check_disc_uses: command[check_disk_uses(ansible)]=/usr/lib/nagios/plugins/check_disk_uses_ansible.sh /dev/sda1 
+check_pid: command[check_pid]=/usr/lib/nagios/plugins/check_pid.sh /dev/sda1 
+check_memory: command[check_memory)]=/usr/lib/nagios/plugins/check_memory.sh /dev/sda1 
+check_status_code: command[check_status_code]=/usr/lib/nagios/plugins/check_status_code.sh /dev/sda1
+check_volume: command[check_volume]=/usr/lib/nagios/plugins/check_volume.sh /dev/sda1 
 
-command_definition: define command {
+
+disc_definition: define command {
                             command_name    check_disk_uses(ansible)
                             command_line    $USER1$/check_nrpe -H $HOSTADDRESS$ -c check_disk_uses(ansible)
                             }
+pid_definition: define command {
+                            command_name    check_pid
+                            command_line    $USER1$/check_nrpe -H $HOSTADDRESS$ -c check_pid
+                            }
+memory_definition: define command {
+                            command_name    check_memory
+                            command_line    $USER1$/check_nrpe -H $HOSTADDRESS$ -c check_memory
+                            }
+status_code_definition: define command {
+                            command_name    check_status_code
+                            command_line    $USER1$/check_nrpe -H $HOSTADDRESS$ -c check_status_code
+                            }
+volume_definition: define command {
+                            command_name    check_volume
+                            command_line    $USER1$/check_nrpe -H $HOSTADDRESS$ -c check_volume
+                            }
+                              
 
-command_service: define service {
+disc_service: define service {
                          use                             generic-service
                          host_name                       localhost
                          service_description             service check customized by daniel (ansible)
                          check_command                   check_disk_uses(ansible)
+                         }
+pid_service: define service {
+                         use                             generic-service
+                         host_name                       localhost
+                         service_description             pid check customized by daniel
+                         check_command                   check_pid
+                         }
+memory_service: define service {
+                         use                             generic-service
+                         host_name                       localhost
+                         service_description             memory check customized by daniel
+                         check_command                   check_memory
+                         }
+status_code_service: define service {
+                         use                             generic-service
+                         host_name                       localhost
+                         service_description             status code check customized by daniel
+                         check_command                   check_status_code
+                         }
+volume_service: define service {
+                         use                             generic-service
+                         host_name                       localhost
+                         service_description             volume check customized by daniel
+                         check_command                   check_volume
                          }
 
